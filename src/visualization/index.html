@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Wi-Fi Scanner Adventure — 3D Signal Radar</title>
+  <style>
+    /* Reset & base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      background: #050510;
+      color: #e0e0ff;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Renderer fills the screen */
+    #renderer-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      cursor: grab;
+    }
+    #renderer-container:active { cursor: grabbing; }
+
+    /* UI overlay layer */
+    #ui-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #ui-layer > * { pointer-events: auto; }
+
+    /* App title */
+    #app-title {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+    }
+    #app-title h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #aabbff;
+      text-shadow: 0 0 20px rgba(100, 140, 255, 0.5);
+      margin-bottom: 2px;
+    }
+    #app-title .subtitle {
+      font-size: 0.7rem;
+      color: #6677aa;
+      display: block;
+    }
+    #app-title .hint {
+      font-size: 0.6rem;
+      color: #445577;
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* Controls panel */
+    #controls-panel {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .panel-section {
+      background: rgba(10, 15, 30, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(100, 140, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px 16px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      justify-content: center;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #445566;
+      transition: background 0.3s;
+    }
+    .status-dot.active { background: #44ff88; box-shadow: 0 0 8px #44ff88; }
+    .status-dot.idle { background: #667788; }
+    .status-dot.error { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
+    .status-dot.paused { background: #ffaa44; }
+
+    .status-text { font-size: 0.75rem; color: #8899bb; }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      border: 1px solid rgba(100, 140, 255, 0.3);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #ccddff;
+      background: rgba(20, 30, 60, 0.8);
+    }
+    .ctrl-btn:hover {
+      background: rgba(40, 60, 120, 0.8);
+      border-color: rgba(100, 140, 255, 0.5);
+    }
+    .ctrl-btn.primary.active {
+      background: rgba(60, 180, 100, 0.3);
+      border-color: rgba(60, 180, 100, 0.5);
+      color: #88ffaa;
+    }
+    .ctrl-btn.secondary.native {
+      background: rgba(180, 120, 60, 0.3);
+      border-color: rgba(180, 120, 60, 0.5);
+    }
+
+    .btn-icon { margin-right: 4px; }
+
+    /* Metrics panel */
+    #metrics-panel {
+      position: absolute;
+      top: 80px;
+      right: 16px;
+      width: 200px;
+    }
+
+    .panel-title {
+      font-size: 0.75rem;
+      color: #8899bb;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 4px;
+    }
+    .metric-label {
+      font-size: 0.6rem;
+      color: #556688;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .metric-value {
+      font-size: 0.8rem;
+      color: #aabbff;
+      font-weight: 600;
+    }
+
+    /* Signal bars */
+    .signal-bars {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .signal-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.6rem;
+    }
+    .signal-bar-name {
+      width: 55px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #7788aa;
+    }
+    .signal-bar-track {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .signal-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+    .signal-bar-rssi {
+      width: 28px;
+      text-align: right;
+      color: #667788;
+      font-size: 0.55rem;
+    }
+
+    /* Debug overlay */
+    #debug-overlay {
+      position: absolute;
+      top: 80px;
+      left: 16px;
+    }
+    .debug-content {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 100, 100, 0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.65rem;
+      line-height: 1.6;
+      color: #ff9999;
+    }
+    .debug-content h4 {
+      margin-bottom: 4px;
+      color: #ffaaaa;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      #metrics-panel { width: 160px; right: 8px; top: 70px; }
+      .metrics-grid { grid-template-columns: 1fr; }
+      .ctrl-btn { padding: 6px 12px; font-size: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="renderer-container"></div>
+  <div id="ui-layer"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
