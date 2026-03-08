@@ -1,0 +1,87 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, claude/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install MAUI workload
+        run: |
+          dotnet workload install maui-android
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build Android
+        run: dotnet build src/WiFiScanner.App/WiFiScanner.App.csproj -f net8.0-android --configuration Release
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install MAUI workload
+        run: |
+          dotnet workload install maui-windows
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build Windows
+        run: dotnet build src/WiFiScanner.App/WiFiScanner.App.csproj -f net8.0-windows10.0.19041.0 --configuration Release
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install MAUI workload
+        run: |
+          dotnet workload install maui-ios
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build iOS
+        run: dotnet build src/WiFiScanner.App/WiFiScanner.App.csproj -f net8.0-ios --configuration Release
+
+  build-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/WiFiScanner.Domain/WiFiScanner.Domain.csproj
+
+      - name: Build Domain
+        run: dotnet build src/WiFiScanner.Domain/WiFiScanner.Domain.csproj --configuration Release
+
+      - name: Build Core
+        run: dotnet build src/WiFiScanner.Core/WiFiScanner.Core.csproj --configuration Release

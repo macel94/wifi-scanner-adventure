@@ -1,0 +1,209 @@
+@page "/"
+@using WiFiScanner.App.Services
+@using WiFiScanner.Domain.Models
+@using System.Text.Json
+@inject ScanningCoordinator Coordinator
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="main-container">
+    <div class="controls">
+        @if (!_isScanning)
+        {
+            <button class="btn primary" @onclick="StartScanning">
+                Start Scanning
+            </button>
+        }
+        else
+        {
+            <button class="btn danger" @onclick="StopScanning">
+                Stop Scanning
+            </button>
+        }
+    </div>
+
+    <div class="stats-panel">
+        <h3>Status</h3>
+        <div class="stat-row">
+            <span class="stat-label">
+                <span class="status-indicator @(_isScanning ? "active" : "inactive")"></span>
+                Scanning
+            </span>
+            <span class="stat-value">@(_isScanning ? "Active" : "Inactive")</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Networks</span>
+            <span class="stat-value">@_networkCount</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Last Update</span>
+            <span class="stat-value">@_lastUpdate</span>
+        </div>
+    </div>
+
+    @if (_showDebug)
+    {
+        <div class="debug-panel">
+            <h4>Orientation</h4>
+            <div class="debug-row">Heading: @_currentHeading.ToString("F1")°</div>
+            <div class="debug-row">Pitch: @_currentPitch.ToString("F1")°</div>
+            <div class="debug-row">Roll: @_currentRoll.ToString("F1")°</div>
+        </div>
+    }
+
+    @if (_showSignalList && _accessPoints.Count > 0)
+    {
+        <div class="signal-list">
+            <h3>Detected Networks (@_accessPoints.Count)</h3>
+            @foreach (var ap in _accessPoints.Take(5))
+            {
+                <div class="signal-item">
+                    <div class="ssid">@ap.Ssid</div>
+                    <div class="details">
+                        @ap.CurrentRssi dBm | @((ap.FrequencyMhz ?? 0) / 1000.0) GHz
+                    </div>
+                    <div class="signal-strength-bar">
+                        <div class="signal-strength-fill"
+                             style="width: @((ap.SignalStrength * 100).ToString("F0"))%; background: @GetSignalColor(ap.SignalStrength)">
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <canvas id="renderCanvas"></canvas>
+</div>
+
+@code {
+    private bool _isScanning;
+    private bool _showDebug = true;
+    private bool _showSignalList = true;
+    private int _networkCount;
+    private string _lastUpdate = "Never";
+    private List<WiFiAccessPoint> _accessPoints = new();
+    private double _currentHeading;
+    private double _currentPitch;
+    private double _currentRoll;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeVisualization();
+            Coordinator.SnapshotUpdated += OnSnapshotUpdated;
+            Coordinator.OrientationChanged += OnOrientationChanged;
+        }
+    }
+
+    private async Task InitializeVisualization()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("WiFiVisualization.initialize", "renderCanvas");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to initialize visualization: {ex.Message}");
+        }
+    }
+
+    private async Task StartScanning()
+    {
+        try
+        {
+            var permissionsGranted = await Coordinator.InitializeAsync();
+            if (!permissionsGranted)
+            {
+                Console.WriteLine("Permissions not granted");
+                return;
+            }
+
+            await Coordinator.StartAsync();
+            _isScanning = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to start scanning: {ex.Message}");
+        }
+    }
+
+    private async Task StopScanning()
+    {
+        try
+        {
+            await Coordinator.StopAsync();
+            _isScanning = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to stop scanning: {ex.Message}");
+        }
+    }
+
+    private async void OnSnapshotUpdated(object? sender, SignalSnapshot snapshot)
+    {
+        await InvokeAsync(() =>
+        {
+            _networkCount = snapshot.TotalCount;
+            _accessPoints = snapshot.AccessPoints.ToList();
+            _lastUpdate = DateTime.Now.ToString("HH:mm:ss");
+            StateHasChanged();
+        });
+
+        try
+        {
+            var signalsJson = JsonSerializer.Serialize(_accessPoints.Select(ap => new
+            {
+                bssid = ap.Bssid,
+                ssid = ap.Ssid,
+                rssi = ap.CurrentRssi,
+                signalStrength = ap.GetSmoothedSignalStrength()
+            }));
+
+            await JS.InvokeVoidAsync("WiFiVisualization.updateSignals", signalsJson);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to update visualization: {ex.Message}");
+        }
+    }
+
+    private async void OnOrientationChanged(object? sender, OrientationData orientation)
+    {
+        await InvokeAsync(() =>
+        {
+            _currentHeading = orientation.Heading;
+            _currentPitch = orientation.Pitch;
+            _currentRoll = orientation.Roll;
+            StateHasChanged();
+        });
+
+        try
+        {
+            await JS.InvokeVoidAsync("WiFiVisualization.updateOrientation",
+                orientation.Heading,
+                orientation.Pitch,
+                orientation.Roll);
+        }
+        catch
+        {
+            // Ignore JS interop errors
+        }
+    }
+
+    private string GetSignalColor(double strength)
+    {
+        if (strength > 0.7) return "#4ade80";
+        if (strength > 0.4) return "#fbbf24";
+        return "#ef4444";
+    }
+
+    public void Dispose()
+    {
+        Coordinator.SnapshotUpdated -= OnSnapshotUpdated;
+        Coordinator.OrientationChanged -= OnOrientationChanged;
+    }
+}
