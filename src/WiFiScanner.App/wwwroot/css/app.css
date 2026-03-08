@@ -1,0 +1,235 @@
+:root {
+    --bg-dark: #0a0e27;
+    --bg-medium: #1a1e3f;
+    --text-light: #e0e0e0;
+    --text-dim: #a0a0a0;
+    --accent-blue: #4a9eff;
+    --accent-green: #4ade80;
+    --accent-red: #ef4444;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-dark);
+    color: var(--text-light);
+}
+
+#app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.loading h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--accent-blue);
+}
+
+.loading p {
+    color: var(--text-dim);
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+}
+
+.controls {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    right: 1rem;
+    z-index: 100;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-medium);
+    color: var(--text-light);
+    border: 2px solid var(--accent-blue);
+}
+
+.btn:hover {
+    background: var(--accent-blue);
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn.primary {
+    background: var(--accent-blue);
+}
+
+.btn.danger {
+    border-color: var(--accent-red);
+    background: var(--bg-medium);
+}
+
+.btn.danger:hover {
+    background: var(--accent-red);
+}
+
+.stats-panel {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+    background: rgba(26, 30, 63, 0.9);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    min-width: 200px;
+    border: 1px solid var(--accent-blue);
+}
+
+.stats-panel h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent-blue);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.stat-label {
+    color: var(--text-dim);
+}
+
+.stat-value {
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-indicator.active {
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+}
+
+.status-indicator.inactive {
+    background: var(--text-dim);
+}
+
+#renderCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    outline: none;
+    touch-action: none;
+}
+
+.signal-list {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 100;
+    background: rgba(26, 30, 63, 0.9);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    max-width: 300px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--accent-blue);
+}
+
+.signal-list h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent-blue);
+}
+
+.signal-item {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-dark);
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.signal-item .ssid {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.signal-item .details {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+}
+
+.signal-strength-bar {
+    height: 4px;
+    background: var(--bg-medium);
+    border-radius: 2px;
+    margin-top: 0.25rem;
+    overflow: hidden;
+}
+
+.signal-strength-fill {
+    height: 100%;
+    transition: width 0.3s, background-color 0.3s;
+    border-radius: 2px;
+}
+
+.debug-panel {
+    position: absolute;
+    top: 5rem;
+    right: 1rem;
+    z-index: 100;
+    background: rgba(26, 30, 63, 0.9);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    max-width: 250px;
+    border: 1px solid var(--text-dim);
+}
+
+.debug-panel h4 {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-blue);
+}
+
+.debug-row {
+    margin-bottom: 0.25rem;
+}
