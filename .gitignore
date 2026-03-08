@@ -1,0 +1,32 @@
+# Node.js
+node_modules/
+dist/
+.cache/
+*.tsbuildinfo
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.ncrunchsolution
+*.ncrunchproject
+.vs/
+*.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Build artifacts
+*.log
